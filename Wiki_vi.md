@@ -309,3 +309,45 @@ reboot
 
 
 [envdir]: https://github.com/themactep/thingino-firmware/tree/master/environment
+
+# Cấu hình truy cập Wi-Fi
+
+## Cổng thông tin chặn (Captive Portal)
+
+Sau khi flash một hình ảnh firmware Thingino mới trên một camera hỗ trợ có mô-đun không dây, camera sẽ không có bất kỳ thông tin nào về mạng không dây của bạn và sẽ không thể tự động kết nối với nó.
+
+> [!LƯU Ý]
+> Các thiết bị giao diện kép (những cái có cả ethernet __và__ Wi-Fi) sẽ không phát sóng một điểm truy cập. Thay vào đó, kết nối với IP hoặc tên máy chủ để bắt đầu thiết lập.
+
+Bạn có thể cung cấp [thông tin xác thực mạng không dây trên một thẻ SD](https://github.com/themactep/thingino-firmware/wiki/Configuring-Wi%E2%80%90Fi-Access#wireless-credentials-on-an-sd-card) hoặc sử dụng cổng thông tin đa năng được tích hợp của chúng tôi.
+
+Sau khi bạn bật camera mà không có thông tin xác thực mạng, nó sẽ thiết lập một điểm truy cập tạm thời và tạo một mạng công cộng có tên là THINGINO-XXXX, nơi XXXX là bốn ký tự cuối cùng của địa chỉ MAC của camera.
+
+Kết nối với mạng này, sử dụng một thiết bị di động (điện thoại thông minh hoặc máy tính bảng) hoặc từ một PC, và điều hướng trình duyệt của bạn đến http://thingino.local/. Bạn nên thấy biểu mẫu để nhập các cài đặt ban đầu cho camera:
+
+![portal1](https://github.com/user-attachments/assets/d0bcd753-c2e5-4694-8db8-bc086dfdc672)
+
+Điền vào biểu mẫu với thông tin hiện tại và nhấp vào nút "Lưu thông tin xác thực" ở dưới cùng.
+
+![portal2](https://github.com/user-attachments/assets/8ac87448-702e-4eb1-9ecc-08d62179bfa4)
+
+Trên trang tiếp theo, xem lại thông tin và sửa nếu bạn tìm thấy lỗi. Nếu không, nhấp vào nút "Tiếp tục với việc khởi động lại".
+
+![portal3](https://github.com/user-attachments/assets/15d0b12a-679d-45d2-a7d3-c71db9a159ab)
+
+Camera sẽ khởi động lại và đăng ký với mạng không dây của bạn bằng thông tin đã cung cấp.
+
+![portal4](https://github.com/user-attachments/assets/70dbeca8-f2e3-4c55-af06-d82148c61adf)
+
+Kiểm tra các thuê DHCP trên router của bạn để tìm địa chỉ IP được gán cho camera.
+
+### Thông tin xác thực không dây trên một thẻ SD
+
+Tạo một tệp `uenv.txt` trên một thẻ SD được định dạng FAT trống với nội dung sau
+
+```
+wlanssid=nameofyournetwork
+wlanpass=yourwirelessnetworkpass
+```
+
+Khởi động lại camera với thẻ đã được chèn vào. Thông tin được cung cấp sẽ được thêm vào môi trường và sử dụng lại để đăng nhập vào mạng không dây.
