@@ -30,7 +30,7 @@ make
 
 
 [0]: https://thingino.com/
-[1]: https://github.com/xuanvuong1702/thingino-firmware/Wiki_vi.md
+[1]: https://github.com/xuanvuong1702/thingino-firmware/blob/master/Wiki_vi.md
 [3]: https://discord.gg/xDmqS944zr
 [4]: https://t.me/thingino
 [5]: https://buildroot.org/downloads/manual/manual.html
