@@ -351,3 +351,53 @@ wlanpass=yourwirelessnetworkpass
 ```
 
 Khởi động lại camera với thẻ đã được chèn vào. Thông tin được cung cấp sẽ được thêm vào môi trường và sử dụng lại để đăng nhập vào mạng không dây.
+
+# Xác định Phần cứng
+
+Để cài đặt bản dựng firmware phù hợp, bạn cần xác định các thành phần phần cứng được sử dụng trong camera của bạn.
+Dưới đây là một bo mạch camera IP điển hình. Cụ thể này là Wyze Cam V3.
+
+![image](https://github.com/themactep/thingino-firmware/assets/37488/ccf35cd3-4b4d-45a7-8e2c-ac386fc88b0e)
+
+### SoC
+
+![image](https://github.com/themactep/thingino-firmware/assets/37488/c90d3fe1-f5bd-4d6e-9f7d-c09ef565f4a5)
+
+SoC Ingenic thường là chip lớn nhất trên bo mạch, hình vuông và màu đen.
+
+Các chip Ingenic thường có nhãn rất rõ ràng xác định duy nhất mô hình SoC.
+
+Gia đình SoC được viết bằng kiểu chữ lớn hơn ngay dưới logo Ingenic: T10, T20, T21, T23, T30, T31, v.v.
+
+Dòng dưới chủ yếu là số, nhưng cũng bao gồm mã chữ cho mô hình: L, LC, N, X, ZX, A, v.v.
+
+### Bộ nhớ Flash
+
+![image](https://github.com/themactep/thingino-firmware/assets/37488/d67a37c2-949a-450c-8201-1ab34798bcd8)
+
+Bộ nhớ flash được sử dụng trên camera có thể là loại NOR, được hỗ trợ tốt bởi thingino,
+hoặc loại NAND, với hỗ trợ sơ bộ rất thử nghiệm.
+
+Các chip NOR thường hoàn toàn vuông vắn, với tám chân rõ ràng, bốn ở mỗi bên đối diện.
+
+Chân số một được biểu thị bằng một ổ khắc hoặc khắc.
+
+Các chip NOR được sử dụng trong camera IP là loại EEPROM 25 và có `25` trong tên mô hình của chúng: `W25Q64`, `MX25L128`, v.v.
+
+Số `64` và `128` chỉ kích thước của chip tính bằng megabit, được chuyển đổi thành megabyte bằng cách chia cho tám: 64/8 = 8 megabyte, 128/8 = 16 megabyte.
+
+### UART
+
+![image](https://github.com/themactep/thingino-firmware/assets/37488/05b6d4a3-7002-41bf-b421-420cf7a7c6e5)
+
+[UART](https://vi.wikipedia.org/wiki/Universal_asynchronous_receiver/transmitter) là một kết nối nối tiếp trực tiếp đến trái tim của camera - SoC của nó.
+
+Việc tìm các liên hệ UART và thiết lập một kết nối nối tiếp đến camera là quan trọng cho bất kỳ công việc nghiêm túc nào với phần cứng, và đặc biệt là cho phát triển firmware.
+
+Thường thì UART có ba liên hệ được gắn nhãn G (GND), T (TX), R (RX). Đôi khi có một liên hệ khác được đánh dấu V (VCC), nhưng chúng tôi không sử dụng nó trong các hoạt động của mình. Camera nên được cung cấp điện thông qua giao diện thông thường của nó, cung cấp bảo vệ chống quá áp.
+
+### Mô-đun Wi-Fi
+
+![image](https://github.com/themactep/thingino-firmware/assets/37488/33f838d8-b4f1-4a5d-9bef-c02ffa2f2853)
+
+... sẽ tiếp tục
