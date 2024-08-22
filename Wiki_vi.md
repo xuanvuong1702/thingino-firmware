@@ -162,3 +162,150 @@ HOME FOLDER/output/<profile_name>/images
 Ví dụ:
 - `thingino-teacup.bin` – Hình ảnh đầy đủ này bao gồm bootloader và được sử dụng cho các cài đặt mới.
 - `thingino-teacup-update.bin` – Hình ảnh này không bao gồm bootloader và phù hợp để cập nhật thiết bị của bạn mà không xóa bootloader hoặc các biến môi trường.
+
+
+# Buildroot
+
+Chúng tôi sử dụng phiên bản mới nhất có sẵn của [Buildroot][1] với [một số chỉnh sửa nhỏ][2] cho phép chúng tôi tạo ra một môi trường xây dựng hoàn toàn di động.
+
+## Camera, Module và Fragment
+
+Phần cứng camera chủ yếu dựa trên mô hình SoC, cảm biến hình ảnh, và đôi khi là một module không dây. Các camera khác nhau có thể sử dụng cùng một SoC, cảm biến, và module Wi-Fi, do đó yêu cầu firmware được xây dựng tương tự, nhưng vẫn có bản đồ GPIO khác nhau và cấu hình phụ trợ. Để tránh lặp lại các cài đặt trong cấu hình, chúng tôi đã tách cấu hình cụ thể cho camera ra khỏi cấu hình phần cứng cơ bản (chúng tôi gọi chúng là module). Chúng tôi chỉ nói với cấu hình camera được lưu trữ trong `config/cameras/` module phần cứng nào được lưu trữ trong `config/modules/` để sử dụng:
+
+
+```
+# MODULE: t31x_gc2053_rtl8189ftv
+```
+Sau đó, trong tệp cấu hình module, chúng tôi đã cấu hình tất cả mọi thứ cho Triade: SoC, cảm biến và module Wi-Fi, nếu có.
+
+Nhưng những cấu hình phần cứng này có rất nhiều thông tin chung, lặp đi lặp lại liên quan đến kiến trúc bộ xử lý và firmware nói chung. Chúng tôi sử dụng các đoạn cấu hình, được lưu trữ trong các tệp `config/fragments/*.fragment`, để tránh lặp lại các cài đặt này. Bạn có thể thấy cách những đoạn này được bao gồm trong cấu hình module:
+
+
+```
+# FRAG: soc toolchain ccache brand rootfs kernel system target
+```
+
+Khi `make` được chạy, cấu hình cuối cùng cho một camera được lắp ráp từ các phần và được lưu dưới dạng tệp `~/output/<camera_config_name>/.config`. Sau đó, nó chạy `make olddefconfig`, phân tích tệp, giải quyết bất kỳ xung đột và dư thừa nào, và tạo ra một tệp `.config` mới hoàn toàn, lưu phiên bản trước đó dưới dạng `.config.old`, được ghi đè bằng bất kỳ thay đổi mới nào, vì vậy chúng tôi cũng lưu phiên bản ban đầu của tệp `.config` dưới dạng `.config_original` để dễ dàng gỡ lỗi hơn.
+
+Để tạo lại tệp `.config` từ tệp cấu hình camera gốc và các tệp bao gồm của nó, chạy `make defconfig`.
+
+## local.fragment và local.mk
+
+Chúng tôi cung cấp một tệp cho các thay đổi cục bộ đối với cấu hình chia sẻ. Tệp `config/fragments/local.fragment` có thể chứa các cài đặt nên được bao gồm trong cấu hình chung trên máy của nhà phát triển, nhưng không đi vào kho lưu trữ upstream. Bạn có thể thêm các gói bổ sung vào đó hoặc ghi đè các cài đặt mặc định:
+
+```
+BR2_PACKAGE_NANO=y
+BR2_PACKAGE_SCREEN=y
+BR2_REPRODUCIBLE=n
+```
+
+Tệp `local.mk` được đặt ở gốc của thư mục firmware là một tính năng tiêu chuẩn của Buildroot cho phép bạn ghi đè nguồn gói, bao gồm cả từ chính Buildroot. Đây là một tính năng vô giá cho phát triển cục bộ. Đọc thêm về điều này trong chương 8.13.6 của <https://buildroot.org/downloads/manual/manual.html>.
+
+```
+LINUX_OVERRIDE_SRCDIR=$(HOME)/dev/thingino/linux
+LINUX_HEADERS_OVERRIDE_SRCDIR=$(HOME)/dev/thingino/linux
+INGENIC_SDK_OVERRIDE_SRCDIR=$(HOME)/dev/thingino/ingenic-sdk
+PRUDYNT_T_OVERRIDE_SRCDIR=$(HOME)/dev/thingino/prudynt-t
+```
+
+[1]: https://buildroot.org/
+[2]: https://github.com/buildroot/buildroot/compare/master...themactep:buildroot:master
+# Cấu hình Camera
+
+Để khởi động camera, bạn cần thiết lập ban đầu môi trường bootloader. Hầu hết các hình ảnh firmware của camera đã có các cài đặt môi trường trong đó, và bạn chỉ cần cung cấp thông tin xác thực mạng không dây của mình để kết nối camera với mạng. Tuy nhiên, nếu bạn đang xây dựng firmware cho một camera mới, hoặc nếu bạn đang sử dụng firmware module, bạn sẽ cần cung cấp tệp môi trường.
+
+### Địa chỉ MAC của Mạng
+
+Khi hệ thống được cài đặt, nó tạo và gán địa chỉ MAC cho các biến môi trường `ethaddr` và `wlanmac`. Các địa chỉ MAC này dựa trên số serial của SoC (System on Chip). Chúng là duy nhất cho thiết bị của bạn. Nếu số serial không khả dụng, địa chỉ MAC ngẫu nhiên sẽ được tạo ra.
+
+Bạn có thể thay đổi hoặc xóa các biến này nếu cần. Điều quan trọng cần lưu ý là một số module WiFi có thể không cung cấp địa chỉ MAC nhất quán mà không có các giá trị được tạo ra này.
+
+### Cấu hình thông qua điểm truy cập của camera
+
+Nếu camera của bạn chưa có thông tin xác thực mạng không dây, nó sẽ khởi động một điểm truy cập với một cổng thông tin được tích hợp cho phép bạn kết nối trực tiếp với camera và nhập thông tin xác thực để kết nối với mạng không dây của bạn. Cổng thông tin chỉ hoạt động trong 5 phút, sau đó nó sẽ tắt vì lý do bảo mật và bạn sẽ cần khởi động lại camera để khởi động lại nó.
+
+Để truy cập cổng thông tin, bật camera và quét các mạng không dây có sẵn để tìm một SSID có tên THINGINO-XXXX, nơi XXXX là một phần duy nhất của địa chỉ MAC của camera. Kết nối với mạng này (nó mở, vì vậy bạn không cần thông tin xác thực) và điều hướng đến _http://thingino.local/_ hoặc _http://172.16.0.1/_ trên trình duyệt web của bạn. Trên trang, nhập SSID và mật khẩu mạng không dây của bạn để truy cập mạng và nhấp vào nút _Save Credentials_. Camera sẽ khởi động lại và cố gắng kết nối với mạng không dây của bạn bằng thông tin xác thực đã cung cấp.
+
+### Cấu hình với thẻ SD
+
+Tìm mô hình camera của bạn trong thư mục [/environment/][envdir], sao chép tệp cấu hình của nó và lưu lại dưới dạng `uEnv.txt`.
+Thay thế giá trị `wlanssid` và `wlanpass` bằng thông tin xác thực mạng không dây của bạn.
+Sao chép tệp vào thẻ SD, chèn thẻ vào camera của bạn và khởi động lại.
+
+### Giải thích môi trường bootloader
+
+#### Cài đặt phần cứng
+
+- `gpio_default` - Danh sách các trạng thái GPIO mặc định khi khởi động. Mỗi vị trí bao gồm số GPIO theo sau là trạng thái mong muốn:
+  - `O` - Output, High
+  - `o` - Output, Low
+  - `i` hoặc `I` - Input
+- `gpio_button` - Chân GPIO cho nút reset
+- `gpio_led_r` - Chân GPIO cho đèn LED màu đỏ
+- `gpio_led_g` - Chân GPIO cho đèn LED màu xanh lá
+- `gpio_led_b` - Chân GPIO cho đèn LED màu xanh dương
+- `gpio_led_y` - Chân GPIO cho đèn LED màu vàng
+- `gpio_mmc_cd` - Chân GPIO để phát hiện thẻ MMC
+- `gpio_mmc_power` - Chân GPIO để điều khiển nguồn cho MMC
+- `gpio_usb_en` - Chân GPIO để điều khiển nguồn cho USB
+- `gpio_speaker` - Chân GPIO để điều khiển nguồn cho loa
+
+#### Chế độ ban đêm
+
+- `day_night_min` - Giá trị gain để chuyển sang chế độ ban ngày
+- `day_night_max` - Giá trị gain để chuyển sang chế độ ban đêm
+- `gpio_ircut` - Chân GPIO cho trình điều khiển IRCUT, có thể là một hoặc hai chân, tùy thuộc vào loại ổ đĩa
+- `gpio_ir850` - Chân GPIO cho đèn LED hồng ngoại 850nm
+- `gpio_ir940` - Chân GPIO cho đèn LED hồng ngoại 940nm
+- `gpio_white` - Chân GPIO cho đèn LED ánh sáng trắng
+- `pwm_ch_ir850` - Kênh PWM của đèn LED hồng ngoại 850nm
+- `pwm_ch_ir940` - Kênh PWM của đèn LED hồng ngoại 940nm
+- `pwm_ch_white` - Kênh PWM của đèn LED ánh sáng trắng
+
+#### Động cơ xoay và nghiêng
+
+- `gpio_motor_en` - Chân GPIO để kích hoạt bộ điều khiển động cơ
+- `gpio_motor_h` - Chân GPIO cho động cơ xoay ngang (pan)
+- `gpio_motor_v` - Chân GPIO cho động cơ di chuyển dọc (tilt)
+- `motor_maxstep_h` - Số lượng microsteps tối đa cho động cơ xoay
+- `motor_maxstep_v` - Số lượng microsteps tối đa cho động cơ nghiêng
+- `disable_homing` - Đặt thành `true` để vô hiệu hóa việc đưa động cơ về vị trí ban đầu khi khởi động
+
+#### Mạng không dây
+
+- `gpio_wlan` - Chân GPIO để điều khiển nguồn cho thẻ không dây
+- `wlanbus` - Loại bus thẻ không dây, có thể là `usb` hoặc `sdio`
+- `wlandev` - Trình điều khiển thẻ không dây
+- `wlandevopts` - Đối số để truyền cho trình điều khiển không dây
+- `wlanssid` - Tên mạng không dây
+- `wlanpass` - Mật khẩu mạng không dây
+
+#### Mạng Ethernet
+
+- `ethaddr` - Địa chỉ MAC cho giao diện Ethernet
+- `disable_eth` - Vô hiệu hóa mạng Ethernet để khởi động nhanh hơn trên các camera chỉ dùng Wi-Fi
+
+#### Linh tinh
+
+- `disable_streamer` - Vô hiệu hóa trình phát video
+- `disable_watchdog` - Vô hiệu hóa hệ thống watchdog
+- `enable_updates` - Kích hoạt các phân vùng ảo được sử dụng cho nâng cấp firmware
+- `hostname` - Tên máy chủ để sử dụng khi kết nối với mạng
+- `timezone` - Múi giờ, được thiết lập từ giao diện người dùng web nên bạn không cần chỉnh sửa trực tiếp
+- `sshkey_ed25519` - Sao lưu của khóa ssh
+- `devip` - Địa chỉ IP của máy trạm của nhà phát triển
+- `debug` - Chế độ debug
+
+## ĐÃ LỖI THỜI
+
+### Cấu hình thông qua mạng không dây
+
+Nếu camera của bạn không có khe cắm thẻ SD và Wi-Fi là cách duy nhất để truy cập vào nó, bạn có thể sử dụng thông tin xác thực mặc định đi kèm với firmware của chúng tôi. Tạo một mạng không dây với tên _thingino_ và mật khẩu _thingino_. Đảm bảo rằng nó có một máy chủ DHCP để gán địa chỉ IP cho các camera. Khởi động camera với firmware mới. Kiểm tra danh sách các máy khách DHCP trên máy chủ. Tìm máy khách có tên máy chủ _thingino-<soc>_ nơi _<soc>_ là mô hình SoC của camera. Kiểm tra địa chỉ IP đã gán và sử dụng nó để kết nối với camera qua ssh. Một khi đã vào shell, đặt thông tin xác thực mạng không dây thực sự của bạn bằng cách sử dụng các lệnh sau:
+```
+fw_setenv wlanssid <ssid>
+fw_setenv wlanpass <password>
+reboot
+```
+
+
+[envdir]: https://github.com/themactep/thingino-firmware/tree/master/environment
